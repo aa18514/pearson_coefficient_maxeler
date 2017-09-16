@@ -19,7 +19,7 @@ The inputs to the board were initially 32-bit floating point streams of data nam
 
 ## Strategies
 Analysing the distribution of data: 
-![Alt text] (https://github.com/aa18514/pearson_coefficient_maxeler/blob/master/data_distribution.JPG "Optional Title") <br>
+![Alt text](https://github.com/aa18514/pearson_coefficient_maxeler/blob/master/data_distribution.JPG "Optional Title") <br>
 An insight into the data distribution gives us useful information - it tells us that sending 4 bytes per a single data point is wasteful, and that full use of variable word lengths should be exploited. For example, for one-bit data points, one can wrap 32 data points instead of one data point in a 32 bit word. 
 Data compression techniques such as delta encoding (https://en.wikipedia.org/wiki/Delta_encoding) can assist in reducing data transfer over the PCIE bus while at the same time reducing the number of compute cycles for which the kernel runs at. Another strategy to reduce the number of BRAMs synthesized is to fuse different weight vectors by effectively structuring memory.
 
