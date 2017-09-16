@@ -18,7 +18,8 @@ We will also look at mixed precision, which allows for better utilization of res
 The inputs to the board were initially 32-bit floating point streams of data namely x and y. The data is generated randomly from the script generate_dataset.cpp. Data value should not exceed 4294967295 as it leads to an overflow and an incorrect evaluation of final results. Both 1/SAMPLE_SIZE and SAMPLE_SIZE are loaded as Scalar Inputs with a complexity of O(1) to avoid the unnecessary division.
 
 ## Strategies
-Analysing the distribution of data: Alt text <br>
+Analysing the distribution of data: 
+Alt text (/pearson_coefficient_maxeler/data_distribution.JPG?raw=true "Optional Title") <br>
 An insight into the data distribution gives us useful information - it tells us that sending 4 bytes per a single data point is wasteful, and that full use of variable word lengths should be exploited. For example, for one-bit data points, one can wrap 32 data points instead of one data point in a 32 bit word. 
 Data compression techniques such as delta encoding (https://en.wikipedia.org/wiki/Delta_encoding) can assist in reducing data transfer over the PCIE bus while at the same time reducing the number of compute cycles for which the kernel runs at. Another strategy to reduce the number of BRAMs synthesized is to fuse different weight vectors by effectively structuring memory.
 
