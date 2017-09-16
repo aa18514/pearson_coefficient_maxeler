@@ -49,4 +49,4 @@ The following method requires some pre-processing of data. It then transforms th
 
 ## Results
 Simple Interface takes a total of 0.0044 seconds @ operating frequncy 75 MHz. 
-It is possible to decouple data transfer over the PCIE bus and the kernel computation by using Advanced Static Interface. This turns out to be exactly 0.00184 seconds @ operating frequency 75 MHz, which is close to the estimated time that it takes for the kernel to run. This shows that the performance is PCIE bound. We are able to curb this using mixed precision which can be used to store data more efficiently.
+It is possible to decouple data transfer over the PCIE bus and the kernel computation by using Advanced Static Interface. This turns out to be exactly 0.00184 seconds @ operating frequency 75 MHz, which is close to the estimated time that it takes for the kernel to run. This shows that the performance is PCIE bound. 
