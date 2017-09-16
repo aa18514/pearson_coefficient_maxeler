@@ -19,7 +19,7 @@ The inputs to the board were initially 32-bit floating point streams of data nam
 
 ## Strategies
 Analysing the distribution of data: Alt text <br>
-An insignt into the data distribution gives us useful information - it tells us that sending 4 bytes per a single data point is wasteful, and that full use of variable word lengths should be exploited. For example, for one-bit data points, one can wrap 32 data points instead of one data point in a 32 bit word. 
+An insight into the data distribution gives us useful information - it tells us that sending 4 bytes per a single data point is wasteful, and that full use of variable word lengths should be exploited. For example, for one-bit data points, one can wrap 32 data points instead of one data point in a 32 bit word. 
 Data compression techniques such as delta encoding (https://en.wikipedia.org/wiki/Delta_encoding) can assist in reducing data transfer over the PCIE bus while at the same time reducing the number of compute cycles for which the kernel runs at. Another strategy to reduce the number of BRAMs synthesized is to fuse different weight vectors by effectively structuring memory.
 
 ## Methodology
@@ -30,8 +30,11 @@ The first method involves using a feedback loop, however in order to cater for t
 
 ### Method 2
 Instead of stalling for 15 cycles before accepting new input as described in method 1, it is also possible to let the data flow naturally, and accumulate the partial sums every M cycles, where M is a divisor of SAMPLE_SIZE. This consumes slightly more hardware resources but has the advantage of requiring only 100000 (single pipe).
-Pipes M LUT Consumption FF Consumption DSP consumption BRAM consumption
-1 5 4.76 % 5.40 % 0.60 % 1.46%
+
+| Pipes | M | LUT | Consumption | FF Consumption | DSP consumption | BRAM consumption |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |  
+| 1 | 5 | 4.76 % | 5.40 % | 0.60 % | 1.46% |
+
 But why stop there? By partitioning data into sets of 1 bit, 2 bits, 4 bits and 8 bits and constructing data packets with variable encoding, we are able to take the total number of cycles from 100,000 to 21020, processing 60 data points in parallel. Further to this, opening by opening 5 PCIE pipes, we now process 300 data points simultaneously taking the total number of computation cycles from 100,000 to just 4204 cycles (~95.79% reduction in kernel execution time and ~79.1% reduction in PCIE data transfer time). Following number of resources are being used:
 Pipes M LUT Consumption FF Consumption DSP consumption BRAM consumption
 4 5 10.67 % 12.35 % 3.17 % 15.08 %
