@@ -10,6 +10,7 @@ for the function callfor the DFE evaluation. The performance consists of the fol
 <br> b) time to read/write on-card memory 
 <br> c) time to transfer data over the PCI Express Bus 
 <br> d) inter-fpga communication
+
 Due to limited hardware, it is assumed that only a single board is used for the the calculation. Further to this, we look at transferring data over the PCI Express bus, as well generation of data from DDR. We expect to the results from DDR to be much more better than results evaluated over the PCI Express bus, as the maximum theoritical bandwith for reading-writing on-card memory (37.5 GBps) is much greater than the regular PCIE bandwith (19 GBps).
 We will also look at mixed precision, which allows for better utilization of resources, and better scalability. Target platform used is MAX3424A board. MAIA platform has not been used due to limited hardware available.
 
@@ -23,8 +24,10 @@ Data compression techniques such as delta encoding (https://en.wikipedia.org/wik
 
 ## Methodology
 So far two methods have been tested and the results have been evaluated succesfully. <br> 
+
 ### Method 1
 The first method involves using a feedback loop, however in order to cater for the floating point latency, there is a stall of 15 cycles before new input is accepted. This method does not scale well as the kernel must run for a total of 100,000 * 15 cycles but consumes fewer resources.
+
 ### Method 2
 Instead of stalling for 15 cycles before accepting new input as described in method 1, it is also possible to let the data flow naturally, and accumulate the partial sums every M cycles, where M is a divisor of SAMPLE_SIZE. This consumes slightly more hardware resources but has the advantage of requiring only 100000 (single pipe).
 Pipes M LUT Consumption FF Consumption DSP consumption BRAM consumption
@@ -34,8 +37,10 @@ Pipes M LUT Consumption FF Consumption DSP consumption BRAM consumption
 4 5 10.67 % 12.35 % 3.17 % 15.08 %
 By using delta encoding we are able to further reduce the total number of cycles from 4204 to 1668.
 The % increase in BRAM is due to the x-coordinate with range, 1 < x < 100000 is generated from on - chip memory. The multi-processing API OpenMP is used to make full use of multiple CPU cores while initializing mapped memory contents.
-Method 3
+
+### Method 3
 The following method requires some pre-processing of data. It then transforms the data into log - domain. This converts a multiplication into addition and a division into a quite cheap subtraction. Furthermore, for |x| < 1, log(1 + x) can be approximated as 1 + x, the results then come back as powers of 2, but replacing the division and multiplication by simple addition and subtraction leads to efficient resource utilization, and allows for much greater parallelism.
-Results
+
+## Results
 Simple Interface takes a total of 0.0044 seconds @ operating frequncy 75 MHz. 
 It is possible to decouple data transfer over the PCIE bus and the kernel computation by using Advanced Static Interface. This turns out to be exactly 0.00184 seconds @ operating frequency 75 MHz, which is close to the estimated time that it takes for the kernel to run. This shows that the performance is PCIE bound. We are able to curb this using mixed precision which can be used to store data more efficiently.
