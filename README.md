@@ -36,10 +36,13 @@ Instead of stalling for 15 cycles before accepting new input as described in met
 | 1 | 5 | 4.76 % | 5.40 % | 0.60 % | 1.46% |
 
 But why stop there? By partitioning data into sets of 1 bit, 2 bits, 4 bits and 8 bits and constructing data packets with variable encoding, we are able to take the total number of cycles from 100,000 to 21020, processing 60 data points in parallel. Further to this, opening by opening 5 PCIE pipes, we now process 300 data points simultaneously taking the total number of computation cycles from 100,000 to just 4204 cycles (~95.79% reduction in kernel execution time and ~79.1% reduction in PCIE data transfer time). Following number of resources are being used:
-Pipes M LUT Consumption FF Consumption DSP consumption BRAM consumption
-4 5 10.67 % 12.35 % 3.17 % 15.08 %
+
+| Pipes | M | LUT Consumption | FF Consumption | DSP consumption | BRAM consumption |
+| :---: | :---: | :---: | :---: | :---: | :---: |  
+| 4 | 5 | 10.67 % | 12.35 % | 3.17 % | 15.08 % |
+
 By using delta encoding we are able to further reduce the total number of cycles from 4204 to 1668.
-The % increase in BRAM is due to the x-coordinate with range, 1 < x < 100000 is generated from on - chip memory. The multi-processing API OpenMP is used to make full use of multiple CPU cores while initializing mapped memory contents.
+The % increase in BRAM is due to the x-coordinate with range, 1 < x < 100000 is generated from on - chip memory. 
 
 ### Method 3
 The following method requires some pre-processing of data. It then transforms the data into log - domain. This converts a multiplication into addition and a division into a quite cheap subtraction. Furthermore, for |x| < 1, log(1 + x) can be approximated as 1 + x, the results then come back as powers of 2, but replacing the division and multiplication by simple addition and subtraction leads to efficient resource utilization, and allows for much greater parallelism.
