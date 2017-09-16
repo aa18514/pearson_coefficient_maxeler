@@ -31,8 +31,8 @@ The first method involves using a feedback loop, however in order to cater for t
 ### Method 2
 Instead of stalling for 15 cycles before accepting new input as described in method 1, it is also possible to let the data flow naturally, and accumulate the partial sums every M cycles, where M is a divisor of SAMPLE_SIZE. This consumes slightly more hardware resources but has the advantage of requiring only 100000 (single pipe).
 
-| Pipes | M | LUT | Consumption | FF Consumption | DSP consumption | BRAM consumption |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: |  
+| Pipes | M | LUT Consumption | FF Consumption | DSP consumption | BRAM consumption |
+| :---: | :---: | :---: | :---: | :---: | :---: |  
 | 1 | 5 | 4.76 % | 5.40 % | 0.60 % | 1.46% |
 
 But why stop there? By partitioning data into sets of 1 bit, 2 bits, 4 bits and 8 bits and constructing data packets with variable encoding, we are able to take the total number of cycles from 100,000 to 21020, processing 60 data points in parallel. Further to this, opening by opening 5 PCIE pipes, we now process 300 data points simultaneously taking the total number of computation cycles from 100,000 to just 4204 cycles (~95.79% reduction in kernel execution time and ~79.1% reduction in PCIE data transfer time). Following number of resources are being used:
