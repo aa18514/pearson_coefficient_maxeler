@@ -1,0 +1,154 @@
+package pearsoncoefficient; 
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel; 
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.Memory; 
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.CounterChain; 
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar; 
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEFix.SignMode; 
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
+import block.mem_block; 
+import com.maxeler.maxcompiler.v2.utils.MathUtils; 
+
+class PearsonCoefficientKernel extends Kernel { 
+	public DFEVar clock_1; 
+	public DFEVar clock_2; 
+	private static final DFEType type = dfeFloat(8, 24); 
+	private static final DFEType cast_type = dfeFix(32, 0, SignMode.TWOSCOMPLEMENT); 
+	private static final int sample_size = 4204; 
+	public DFEVar cycles; 
+	
+	void initialize_memory_contents(mem_block[] block, int width, int height, String name){ 
+		for(int i = 0; i < width; i++){
+			block[i] = new mem_block(); 
+			block[i].m = mem.alloc(dfeFix(32, 0, SignMode.TWOSCOMPLEMENT), height); 
+			block[i].m.mapToCPU(name + i); 
+		}
+	}
+
+	void feedback(int n, DFEVar data, DFEVector<DFEVar> contents){
+		//DFEVar remainder = (cycles === 0) ? constant.var(0).cast(cast_type) : stream.offset(contents[n], -1); 
+		//data = data + remainder; 
+		contents[n] <== constant.var(0).cast(dfeFix(32, 0, SignMode.TWOSCOMPLEMENT)); 
+	}
+
+	DFEVector<DFEVar> decode_bits(DFEVector<DFEVar> y, mem_block[] block, int multiplicand, int mask, int memory_capacity){ 
+		DFEVector<DFEVar> contents = new DFEVectorType<DFEVar>(cast_type, 25).newInstance(this); 	
+		DFEVar zero_constant = constant.var(0).cast(cast_type); 
+	
+		for(int j = 0; j < 5; j++){
+			
+			DFEVar sum_y = zero_constant; 
+			DFEVar sum_x = zero_constant; 
+			DFEVar sum_xy = zero_constant; 
+			DFEVar sum_xx = zero_constant; 
+			DFEVar sum_yy = zero_constant; 
+
+			for(int i = 0; i < 32/multiplicand; i++){
+				 DFEVar y_bit = ((y[j] >> multiplicand * i) & mask); 
+				 DFEVar x_bit = (cycles < memory_capacity) ? block[i].m.read(cycles.cast(dfeUInt(MathUtils.bitsToAddress(memory_capacity)))) : constant.var(0).cast(cast_type); 
+				 sum_x = sum_x + x_bit; 
+				 sum_y = sum_y + y_bit;
+				 sum_xy = sum_xy + (x_bit * y_bit); 
+				 sum_xx = sum_xx + (x_bit * x_bit); 
+				 sum_yy = sum_yy + (y_bit * y_bit); 
+			}
+
+			feedback(5*j + 0, sum_x, contents); 
+			feedback(5*j + 1, sum_y, contents); 
+			feedback(5*j + 2, sum_xy, contents);
+			feedback(5*j + 3, sum_xx, contents); 
+			feedback(5*j + 4, sum_yy, contents); 
+		}
+		return contents; 
+	}
+
+
+	PearsonCoefficientKernel(KernelParameters parameters) { 
+		super(parameters); /* the variable cycles define when to read certain memory blocks */ 
+		cycles = control.count.simpleCounter(32).cast(type); 
+		DFEVar SAMPLE_SIZE = io.scalarInput("sample_size", type); 
+		
+		mem_block[] one_bits = new mem_block[32]; 
+		mem_block[] two_bits = new mem_block[16]; 
+		mem_block[] four_bits = new mem_block[8]; 
+		mem_block[] eight_bits = new mem_block[4]; 
+
+		CounterChain chain_1 = control.count.makeCounterChain(); 
+		clock_1 = chain_1.addCounter(sample_size/5, 1).cast(dfeUInt(32)); 
+		clock_2 = chain_1.addCounter(5, 1).cast(dfeUInt(8)); 
+		
+		initialize_memory_contents(one_bits, 32, 63, "one_bit"); 
+		initialize_memory_contents(two_bits, 16, 128, "two_bits"); 
+		initialize_memory_contents(four_bits, 8, 1485, "four_bits"); 
+		initialize_memory_contents(eight_bits, 4, 21020, "eight_bits"); 
+
+ 		DFEVectorType<DFEVar> Type = new DFEVectorType<DFEVar>(type, 4); 
+		
+		DFEVector<DFEVar> data = io.input("y1", Type); 
+		DFEVector<DFEVar> data1 = io.input("y2", Type); 
+		DFEVector<DFEVar> data2 = io.input("y3", Type); 
+		DFEVector<DFEVar> data3 = io.input("y4", Type); 
+		DFEVector<DFEVar> data4 = io.input("y5", Type); 
+
+		DFEVectorType<DFEVar> y_Type = new DFEVectorType<DFEVar>(dfeFix(32, 0, SignMode.TWOSCOMPLEMENT), 5); 
+		DFEVector<DFEVar> y_bits = y_Type.newInstance(this); 
+		DFEVector<DFEVar> y_two_bits = y_Type.newInstance(this);
+		DFEVector<DFEVar> y_four_bits = y_Type.newInstance(this);  
+		DFEVector<DFEVar> y_eight_bits = y_Type.newInstance(this); 
+	
+		DFEType y_type = dfeFix(32, 0, SignMode.TWOSCOMPLEMENT); 
+
+		y_bits[0] <== data[0].cast(y_type); 
+		y_bits[1] <== data1[0].cast(y_type); 
+		y_bits[2] <== data2[0].cast(y_type); 
+		y_bits[3] <== data3[0].cast(y_type); 
+		y_bits[4] <== data4[0].cast(y_type);
+		
+		y_two_bits[0] <== data[1].cast(y_type); 
+		y_two_bits[1] <== data1[1].cast(y_type); 
+		y_two_bits[2] <== data2[1].cast(y_type); 
+		y_two_bits[3] <== data3[1].cast(y_type); 
+		y_two_bits[4] <== data4[1].cast(y_type); 
+		
+		y_four_bits[0] <== data[2].cast(y_type); 
+		y_four_bits[1] <== data1[2].cast(y_type); 
+		y_four_bits[2] <== data2[2].cast(y_type); 
+		y_four_bits[3] <== data3[2].cast(y_type); 
+		y_four_bits[4] <== data4[2].cast(y_type); 
+		
+		y_eight_bits[0] <== data[3].cast(y_type); 
+		y_eight_bits[1] <== data1[3].cast(y_type); 
+		y_eight_bits[2] <== data2[3].cast(y_type); 
+		y_eight_bits[3] <== data3[3].cast(y_type); 	
+		y_eight_bits[4] <== data4[3].cast(y_type); 
+
+		DFEVector<DFEVar> one  = decode_bits(y_bits, one_bits, 1, 0x01, 63); 
+		DFEVector<DFEVar> two  = decode_bits(y_two_bits, two_bits, 2, 0x03, 128); 
+		DFEVector<DFEVar> four = decode_bits(y_four_bits, four_bits, 4, 0xF, 1485); 
+		DFEVector<DFEVar> eight = decode_bits(y_eight_bits, eight_bits, 8, 0xFF, 21020);  
+	
+		DFEVar sum_xy = constant.var(1).cast(y_type); 	
+		DFEVar sum_x = constant.var(2).cast(y_type); 
+		DFEVar sum_y = constant.var(3).cast(y_type); 
+		DFEVar sum_xx = constant.var(4).cast(y_type); 
+		DFEVar sum_yy = constant.var(5).cast(y_type); 
+		
+		for(int i = 0; i < 5; i++){
+			sum_xy = sum_xy + one[5*i + 2];
+			sum_x =  sum_x +  one[5*i + 0]; 
+			sum_y =  sum_y +  one[5*i + 1]; 
+			sum_xx = sum_xx + one[5*i + 3]; 
+			sum_yy = sum_yy + one[5*i + 4]; 
+		} 
+
+		DFEVar final_constraint = (clock_2 === 4 & clock_1 === ((sample_size/5) - 1)); 
+		DFEVar zero_constraint =  (clock_1 === 0 & (clock_2 === 0 | clock_2 === 1 | clock_2 === 2)); 
+		final_constraint |= zero_constraint; 
+		DFEVar numerator = sum_xy.cast(type) - (SAMPLE_SIZE * ((sum_x * sum_y).cast(type))); 
+		DFEVar denominator = ((sum_xx).cast(type) - SAMPLE_SIZE *(sum_x * sum_x).cast(type)) * ((sum_yy).cast(type) - SAMPLE_SIZE * (sum_y * sum_y).cast(type)); 
+		io.output("coefficient", (numerator * numerator)/denominator, type, final_constraint); 
+	}
+}

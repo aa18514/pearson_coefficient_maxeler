@@ -1,0 +1,48 @@
+
+package pearsoncoefficient;
+
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.standard.Manager;
+import com.maxeler.maxcompiler.v2.managers.standard.Manager.IOType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelConfiguration;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager; 
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.BuildConfig; 
+import com.maxeler.maxcompiler.v2.managers.BuildConfig.Effort; 
+import com.maxeler.maxcompiler.v2.managers.BuildConfig.Level;
+
+class PearsonCoefficientManager extends CustomManager { 
+	public PearsonCoefficientManager(EngineParameters engineparameters){
+		super(engineparameters); 
+		config.setDefaultStreamClockFrequency(200); 
+	}
+	private static EngineInterface interfaceDefault(CustomManager m){
+		EngineInterface ei = new EngineInterface(); 
+		InterfaceParam N = ei.addParam("sample_size", CPUTypes.FLOAT);
+		KernelBlock[] k = new KernelBlock[1];
+		k[0] = m.addKernel(new PearsonCoefficientKernel(m.makeKernelParameters("PearsonCoefficientKernel"))); 
+		k[0].getInput("y1") <== m.addStreamFromCPU("x1"); 
+		k[0].getInput("y2") <== m.addStreamFromCPU("x2"); 
+		k[0].getInput("y3") <== m.addStreamFromCPU("x3"); 
+		k[0].getInput("y4") <== m.addStreamFromCPU("x4"); 
+		k[0].getInput("y5") <== m.addStreamFromCPU("x5"); 
+		m.addStreamToCPU("y01") <== k[0].getOutput("coefficient"); 
+		ei.setScalar("PearsonCoefficientKernel", "sample_size", N);
+		return ei; 
+	}
+
+	public static void main(String [] args){ 
+		EngineParameters params = new EngineParameters(args); 
+		PearsonCoefficientManager m = new PearsonCoefficientManager(params); 
+		m.createSLiCinterface(interfaceDefault(m));
+		BuildConfig bc = m.getBuildConfig(); 
+		bc.setBuildEffort(Effort.VERY_HIGH); 
+		m.build();
+	}
+}
+
+
