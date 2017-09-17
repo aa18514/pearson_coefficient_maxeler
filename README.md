@@ -46,7 +46,7 @@ By using delta encoding we are able to further reduce the total number of cycles
 The % increase in BRAM is due to the x-coordinate with range, 1 < x < 100000 is generated from on - chip memory. 
 
 ### Method 3
-The following method requires some pre-processing of data. It then transforms the data into log - domain. This converts a multiplication into addition and a division into a quite cheap subtraction. Furthermore, for |x| < 1, log(1 + x) can be approximated as 1 + x, the results then come back as powers of 2, but replacing the division and multiplication by simple addition and subtraction leads to efficient resource utilization, and allows for much greater parallelism.
+The following method requires some pre-processing of data. It then transforms the data into log - domain. This converts a multiplication into addition and a division into a quite cheap subtraction. Furthermore, for |x| < 1, log(1 + x) can be approximated using taylor expansion, the results then come back as powers of 2, but replacing the division and multiplication by simple addition and subtraction leads to efficient resource utilization, and therfore allows for much greater parallelism.
 
 ## Results
 Simple Interface takes a total of 0.0044 seconds @ operating frequncy 75 MHz. 
